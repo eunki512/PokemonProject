@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>gameMain</title>
+<style>
+*{margin:0px;}
+#stage{
+	width:1000px;
+	height:800px;
+	background-image:url("./images/mainBg.jpg");
+	position:relative;
+	margin:auto;
+}
+img{
+	width:200px;
+	height:200px;
+	position:absolute;
+	top:500px;
+}
+img:nth-child(1){
+	left:230px;
+}
+img:nth-child(2){
+	left:570px;
+}
+</style>
+<script>
+var audio;
+
+function init(){
+	audio=document.createElement("audio");
+	audio.volume=0.25;
+	audio.loop=true;
+
+	createAudio("./music/mainBGM.mp3");
+}
+function createAudio(src){
+	audio.src=src;
+	audio.play();
+}
+
+addEventListener("load", function(){
+	init();
+});
+</script>
+</head>
+<body>
+	<div id="stage">
+		<img src="./images/mainBt1.png" onClick="location.assign('./game.html')"/>
+		<img src="./images/mainBt2.png" onClick="location.assign('./gameRules.html')"/>
+	</div>
+</body>
+</html>

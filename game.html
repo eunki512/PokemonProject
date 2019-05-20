@@ -1,0 +1,665 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>game</title>
+<style>
+*{margin:0px;}
+#stage{
+	width:1000px;
+	height:800px;
+	border:2px solid black;
+	position:relative;
+	margin:auto;
+	overflow:hidden;
+}
+</style>
+<script src="./lib/common.js"></script>
+<script src="./lib/GameObject.js"></script>
+<script src="./lib/Object.js"></script>
+<script src="./lib/ObjectManager.js"></script>
+<script src="./lib/Trainer.js"></script>
+<script src="./lib/Pikachu.js"></script>
+<script src="./lib/Pokemon.js"></script>
+<script src="./lib/Rocket.js"></script>
+<script src="./lib/MyPokemon.js"></script>
+<script src="./lib/EnemyPokemon.js"></script>
+<script src="./lib/InfoText.js"></script>
+<script src="./lib/ControlButton.js"></script>
+<script src="./lib/Info.js"></script>
+<script src="./lib/HP.js"></script>
+<script src="./lib/Bt.js"></script>
+<script>
+var stage;
+var objectManager;
+var audio;
+var map;
+
+var trainer;
+var pikachu;
+var level=1;  //현재 레벨  
+var exp=0;  //현재 경험치
+var getNum=0;  //잡은 포켓몬의 마리 수
+
+var myPokemon;
+var myHpArray=[];  //나의 포켓몬들의 HP를 담는 배열
+var number=0;  //현재 배틀중인 나의 포켓몬 번호
+var myPokemonList=["피카츄","파이리","꼬부기"];  //나의 포켓몬 배열
+
+var enemyPokemon;
+var enemyLevel=1;  //현재 배틀중인 야생 포켓몬의 레벨
+var enemyHp;
+var enemyNumber=0;  //현재 배틀중인 야생 포켓몬 번호
+var pokemonList=["캐이시","디그다","쏘드라","알통몬","잉어킹","뚜벅쵸","구구","꼬렛","식스테일","주뱃","이상해씨","버터플","모래두지","니드런","삐삐","고라파덕","망키","가디","발챙이","모다피", "야돈","코일","셀러","슬리프","찌리리공","탕구리","덩쿠리","콘치","별가사리","라프라스","이브이","암나이트"];  //야생 포켓몬 배열
+
+var flag=false;  //로켓단 등장했는지 여부
+var rocketNum=0;  //현재 배틀중인 로켓단 포켓몬 번호 
+var rocketList=["또도가스","냐옹","아보크"];  //로켓단의 포켓몬 배열
+var gameClear=0;  //로켓단을 물리쳤는지 여부
+var btClear;  //게임 계속하기 버튼
+
+var btArray=["싸운다","포켓몬","몬스터볼"]; //오른쪽 하단 버튼 배열
+var detailArray=[  //오른쪽 하단 버튼 클릭시 세부 메뉴
+	["1. 일렉트릭볼", "2. 10만볼트", "3. 전광석화", "4. 취소"],
+	["1. 연막", "2. 불꽃세례", "3. 할퀴기", "4. 취소"],
+	["1. 거품", "2. 물대포", "3. 몸통박치기", "4. 취소"],
+	["1. 피카츄", "2. 파이리", "3. 꼬부기", "4. 취소"],
+	["","","1. 던진다", "2. 취소"]
+];
+var dbtArray=[];  //세부 메뉴의 div를 임시로 담는 배열
+
+var sk;  //현재 사용한 스킬을 임시로 담는 변수
+var count=0;  //생성부터 사라지기까지 카운트
+var attackSt;  //공격 주고받기 setTimeout
+var pcount=0;
+var pocketSt;  //포켓볼 던지기 setTimeout
+var infoText;  //현재 화면 중앙에 나오는 안내 텍스트
+var st;  //포켓볼 던지는 효과 반복
+
+var flag1=true;
+var flag2=true;
+var enemyEffectSt;  //적 포켓몬이 깜박거리는 효과 반복
+var myEffectSt;  //나의 포켓몬이 깜박거리는 효과 반복
+
+//초기 설정 함수
+function init(){
+	stage=document.getElementById("stage");
+	audio=document.createElement("audio");
+	audio.loop=true;
+	map=document.createElement("img");
+	objectManager=new ObjectManager();
+
+	main();
+	gameLoop();
+}
+
+//메인 화면 관련 함수
+function main(){
+	if(gameClear==1){
+		infoText.remove();
+		stage.removeChild(btClear.div);
+		gameClear++;
+	}
+	if(level%3==0){
+		createAudio("./music/map2BGM.mp3", 0.4);
+	}else{
+		createAudio("./music/map1BGM.mp3", 0.2);
+	}
+	createProfile();
+	setLevel();
+	createMap();
+	createPokemon();
+	createTrainer();
+	createPikachu();
+	createRocket();
+}
+//배경음악 생성 함수
+function createAudio(src,vol){
+	audio.src=src;
+	audio.volume=vol;
+	audio.play();
+}
+//캐릭터의 기본 정보 생성 함수
+function createProfile(){
+	for(var i=0;i<2;i++){
+		if(i==0){
+			var text="Lv."+level+"<br/>Exp."+exp;
+		}else{
+			var text="잡은 포켓몬의 수<br/>"+getNum+" 마리";
+		}
+		var pro=new Info(stage,12,10+i*70,200,70,0,"#cce3b3",text);
+		pro.div.style.border="3px solid #009900";
+		pro.div.style.color="#000";
+		pro.div.style.lineHeight=30+"px";
+	}
+}
+//경험치에 따른 레벨 설정 함수
+function setLevel(){
+	if(exp>=100){
+		level++;
+		exp-=100;
+	}
+	createProfile();
+}
+//맵 생성 함수
+function createMap(){
+	stage.style.background="#000";
+	if(level%3==0){
+		map.src="./images/map2.png";
+	}else if(level%4==0){
+		map.src="./images/map3.png";
+	}else{
+		map.src="./images/map1.png";
+	}
+	map.style.width=567+"px";
+	map.style.height=800+"px";
+	map.style.position="absolute";
+	map.style.left=230+"px";
+	stage.appendChild(map);
+}
+//트레이너 생성 함수
+function createTrainer(){
+	trainer=new Trainer("TRAINER",stage,515,685,45,50,0,0,0,0,"","./images/trainerFront.png");
+	objectManager.addObject(trainer);  //트레이너 등록
+}
+//피카츄 생성 함수
+function createPikachu(){
+	pikachu=new Pikachu("PIKACHU",stage,520,730,40,40,0,0,0,0,"","./images/pikachuFront.png");
+	objectManager.addObject(pikachu);  //피카츄 등록
+}
+//야생 포켓몬 생성 함수
+function createPokemon(){
+	var n=getRandom(4)+4;
+	for(var i=0;i<n;i++){
+		var pokeX=getRandomByRange(320,660);
+		var pokeY=getRandomByRange(45,620);
+		var pokeSrc="./images/enemyPokemon.png";
+		var pokemon=new Pokemon("POKEMON",stage,pokeX,pokeY,30,30,0,0,0,0,"",pokeSrc);
+		objectManager.addObject(pokemon);  //야생 포켓몬 등록
+	}
+}
+//로켓단 생성 함수
+function createRocket(){
+	if(level>=5 && gameClear==0){
+		var rocket=new Rocket("ENEMY",stage,490,10,100,100,0,0,0,0,"","./images/teamRocket.png");
+		objectManager.addObject(rocket);  //로켓단 등록
+	}
+}
+//트레이너+피카츄 이동 함수
+function control(){
+	var key=event.keyCode;
+	switch(key){
+		case 37:
+			if(trainer.x<315){
+				trainer.velX=0; pikachu.velX=0;
+				break;
+			}else{
+				trainer.velX=-10; trainer.img.src="./images/trainerLeft.png";
+				pikachu.velX=-10; pikachu.img.src="./images/pikachuLeft.png";
+				break;
+			}
+		case 39: 
+			if(trainer.x>670){
+				trainer.velX=0; pikachu.velX=0;
+				break;
+			}else{
+				trainer.velX=10; trainer.img.src="./images/trainerRight.png";
+				pikachu.velX=10; pikachu.img.src="./images/pikachuRight.png";
+				break;
+			}
+		case 38:
+			if(trainer.y<10){
+				trainer.velY=0; pikachu.velY=0;
+				break;
+			}else{
+				trainer.velY=-10; trainer.img.src="./images/trainerBack.png";
+				pikachu.velY=-10; pikachu.img.src="./images/pikachuBack.png";
+				break;
+			}
+		case 40: 
+			if(trainer.y>640){
+				trainer.velY=0; pikachu.velY=0;
+				break;
+			}else{
+				trainer.velY=10; trainer.img.src="./images/trainerFront.png";
+				pikachu.velY=10; pikachu.img.src="./images/pikachuFront.png";
+				break;
+			}
+	}
+}
+//키보드에서 손을 뗐을 때 작동
+function stop(){
+	var key=event.keyCode;
+	if(key==37 || key==39){
+		trainer.velX=0;
+		pikachu.velX=0;
+	}
+	if(key==38 || key==40){
+		trainer.velY=0;
+		pikachu.velY=0;
+	}	
+}
+//게임 내의 모든 오브젝트들을 제거
+function removeAll(){
+	var l=objectManager.objectArray.length;
+	for(var i=0;i<l;i++){
+		var obj=objectManager.objectArray[0];
+		objectManager.removeObject(obj);
+	}
+	setTimeout("battle()", 500);
+}
+//배틀 화면 관련 함수
+function battle(){
+	if(flag){
+		createAudio("./music/rocketBGM.mp3", 0.3);
+	}else{
+		createAudio("./music/battleBGM.mp3", 0.3);
+	}
+	createBattleMap();
+	createButton();
+	createMyInfoD();
+	createEnemyInfo();
+	createMyPokemon();
+	createEnemyPokemon();
+}
+//배틀 맵 생성 함수
+function createBattleMap(){
+	if(level%3==0){
+		stage.style.background="#adc4e9";
+	}else if(level%4==0){
+		stage.style.background="#ffffcc";   
+	}else{
+		stage.style.background="#cbff97"; 
+	}
+	if(level%3==0){
+		map.src="./images/battleBg2.png";
+	}else if(level%4==0){
+		map.src="./images/battleBg3.png";
+	}else{
+		map.src="./images/battleBg1.png";  
+	}
+	map.style.width=100+"%";
+	map.style.height=680+"px";
+	map.style.left=0+"px";
+}
+//내 포켓몬 전투 이미지 부착
+function createMyPokemon(){
+	myPokemon=new MyPokemon("",stage,190,370,300,300,0,0,0,0,"","./images/mypokemon/"+myPokemonList[0]+".png");
+	objectManager.addBattleObject(myPokemon);  //내 포켓몬 등록
+}
+//적 포켓몬 전투 이미지 부착
+function createEnemyPokemon(){
+	if(flag){
+		enemyPokemon=new EnemyPokemon("",stage,600,120,300,300,0,0,0,0,"","./images/rocket/"+rocketList[rocketNum]+".png");
+		if(rocketNum==0){
+			createText(3);  //로켓단 등장을 텍스트로 알림
+			setTimeout("createText(4)", 2500);  //로켓단이 몬스터를 내보냈음을 알림
+		}else{
+			setTimeout("createText(4)", 500);  //로켓단이 몬스터를 내보냈음을 알림
+		}
+	}else{
+		enemyNumber=getRandom(pokemonList.length);
+		enemyPokemon=new EnemyPokemon("",stage,600,120,300,300,0,0,0,0,"","./images/pokemon/"+pokemonList[enemyNumber]+".png");
+		createText(1);  //야생 몬스터 등장을 텍스트로 알림
+	}
+	objectManager.addBattleObject(enemyPokemon);  //적 포켓몬 등록
+	createEnemyInfo();
+}
+//하단 버튼 생성 함수
+function createButton(){
+	for(var i=0;i<3;i++){
+		if(i==2){
+			var bt=new ControlButton(stage,675+110*i,690,100,100,50,"","./images/pocketBall.png","",i);
+		}else{
+			if(level%3==0){
+				var color="#6633ff";
+			}else if(level%4==0){
+				var color="#ae7600";   
+			}else{
+				var color="#33cc33"; 
+			}
+			var bt=new ControlButton(stage,675+110*i,690,100,100,50,color,"",btArray[i],i);
+		}
+		objectManager.addBattleObject(bt);  //하단 버튼 등록
+	}
+}
+//하단 버튼 클릭시 세부 항목 삭제
+function removeButton(){
+	for(var a=0;a<dbtArray.length;a++){
+		stage.removeChild(dbtArray[a]);
+	}
+	dbtArray=[];
+}
+//나의 포켓몬 정보 초기 호출 함수
+function createMyInfoD(){
+	var str=myPokemonList[number]+"&nbsp;&nbsp;Lv."+level+"<br/>";
+	var info=new Info(stage,5,600,230,70,50,"#00abe3",str);
+	objectManager.addBattleObject(info);
+
+	for(var i=0;i<3;i++){
+		var myHp=new HP(stage,20,637,200,18,0,"#ff3300");
+		myHpArray.push(myHp);
+		objectManager.addBattleObject(myHp);
+	}
+	myHpArray[0].div.style.display="block";
+	myHpArray[0].div.style.zIndex=3;
+	myHpArray[1].div.style.display="none";
+	myHpArray[2].div.style.display="none";
+}
+//모든 나의 포켓몬 hp를 안보이게
+function allNone(){
+	for(var i=0;i<3;i++){
+		myHpArray[i].div.style.display="none";
+		myHpArray[i].div.style.zIndex=1;
+	}
+}
+//나의 포켓몬 정보 생성 함수
+function createMyInfo(n){
+	var str=myPokemonList[number]+"&nbsp;&nbsp;Lv."+level+"<br/>";
+	var info=new Info(stage,5,600,230,70,50,"#00abe3",str);
+	objectManager.addBattleObject(info);
+
+	allNone();
+	myHpArray[n].div.style.display="block";
+	myHpArray[n].div.style.zIndex=3;
+}
+//적 포켓몬 정보 생성 함수
+function createEnemyInfo(){
+	if(flag){
+		enemyLevel=level+1;
+		var str=rocketList[rocketNum]+"&nbsp;&nbsp;Lv."+enemyLevel+"<br/>";
+	}else{
+		if(level<3){
+			enemyLevel=getRandom(3)+1;
+		}else{
+			enemyLevel=getRandom(5)+(level-2);
+		}
+		var str=pokemonList[enemyNumber]+"&nbsp;&nbsp;Lv."+enemyLevel+"<br/>";
+	}
+	var info=new Info(stage,760,10,230,70,50,"#00abe3",str);
+	enemyHp=new HP(stage,775,45,200,18,0,"#ff3300");
+	objectManager.addBattleObject(info);
+	objectManager.addBattleObject(enemyHp);
+}
+//공격 주고받는 함수
+function attack(){
+	count++;
+	if(count==1){
+		myAttackEffect();
+	}
+	if(count==10){
+		enemyHp.enemyHpFunction();
+	}
+	if(parseInt(enemyHp.div.style.width)<50){
+		enemyPokemon.img.style.opacity=0;
+		enemyHp.div.style.opacity=0;
+		if(flag){
+			if(count==30){  //로켓단의 포켓몬을 쓰러트렸을 때
+				var text=rocketList[rocketNum]+" 는(은) 쓰러졌다";
+				infoText=new InfoText(stage,60,200,900,250,250,text,50);
+			}
+			if(rocketNum!=2){
+				if(count==60){
+					rocketNum++;
+					infoText.remove();
+					createEnemyPokemon();
+					count=0;
+					clearTimeout(attackSt);
+					return;
+				}
+			}else{  //로켓단을 이겼을 때 -> 게임 클리어
+				if(count==60){
+					infoText.remove();
+				}
+				if(count==70){ 
+					createAudio("./music/victoryBGM.mp3", 0.3);
+					var text="야호~! 로켓단을 해치웠다!!";
+					infoText=new InfoText(stage,60,200,900,250,250,text,50);			
+				}
+				if(count==100){
+					infoText.remove();
+				}
+				if(count==110){
+					createClear();
+					count=0;
+					clearTimeout(attackSt);
+					return;
+				}		
+			}
+			
+		}else{  //적 포켓몬을 쓰러트렸을 때
+			if(count==30){  
+				createAudio("./music/winBGM.mp3", 0.2);
+				var e=getRandom(20)+50;
+				exp+=e;
+				var text="야생 "+pokemonList[enemyNumber]+" 는(은) 쓰러졌다<br/>";
+				text+="경험치 "+e+"을 얻었다!!";
+				infoText=new InfoText(stage,120,200,800,250,120,text,50);
+				removeBattleAll();
+			}
+			if(count==80){
+				infoText.remove();
+				count=0;
+				clearTimeout(attackSt);
+				return;
+			}
+		}
+	}else{
+		if(parseInt(myHpArray[number].div.style.width)<50){   
+			if(count==50){  //게임오버
+				createAudio("./music/endBGM.mp3", 0.3);
+				myPokemon.img.src="./images/mypokemon/"+myPokemonList[number]+"패배.png";
+				for(var i=0;i<3;i++){
+					myHpArray[i].div.style.display="none";
+				}
+				var text="Game Over!!";
+				infoText=new InfoText(stage,0,0,1000,800,500,text,100);
+				infoText.div.style.borderRadius=0+"px";
+				infoText.div.style.opacity=0.5+"px";
+
+				var txt="재시작";
+				var bt=new Bt(stage,420,400,200,110,"#fff",txt,50,0);
+				bt.div.addEventListener("click", function(){
+					location.reload();
+				});
+				count=0;
+				clearTimeout(attackSt);
+				return;
+			}
+		}else{  //적 포켓몬의 공격
+			if(count==30){
+				if(flag){
+					var text=rocketList[rocketNum]+"의 공격!!";
+				}else{
+					var text=pokemonList[enemyNumber]+"의 공격!!";
+				}
+				infoText=new InfoText(stage,280,200,540,250,250,text,60);
+				enemyAttackEffect();
+			}
+			if(count==40){
+				infoText.remove();
+				stopEffect();
+				myPokemon.div.style.opacity=1;	
+				count=0;
+				clearTimeout(attackSt);
+				return;
+			}
+		}
+	}
+	removeButton();
+	attackSt=setTimeout("attack()", 50);
+}
+//포켓볼 던지는 함수
+function pocketBall(){
+	pcount++;
+	if(parseInt(enemyHp.div.style.width)<80){
+		if(flag){
+			if(pcount==40){
+				createText(2);	
+			}
+			if(pcount==70){
+				infoText.remove();
+				pcount=0;
+				clearTimeout(pocketSt);
+				return;
+			}
+		}else{
+			if(pcount==40){
+				createAudio("./music/getBGM.mp3", 0.2);
+				var e=getRandom(25)+60;
+				exp+=e;
+				getNum++;
+				var text="신난다~! "+pokemonList[enemyNumber]+" 을(를) 잡았다<br/>";
+				text+="경험치 "+e+"을 얻었다!!";
+				infoText=new InfoText(stage,60,200,900,250,120,text,50);
+				clearInterval(st);
+				removeBattleAll();
+			}
+			if(pcount==90){
+				infoText.remove();
+				pcount=0;
+				clearTimeout(pocketSt);
+				return;
+			}
+		}
+	}else{
+		if(pcount==40){
+			createText(2);	
+		}
+		if(pcount==70){
+			infoText.remove();
+			pcount=0;
+			clearTimeout(pocketSt);
+			return;
+		}
+	}
+	removeButton();
+	pocketSt=setTimeout("pocketBall()", 50);
+}
+//적 포켓몬이 공격 받았을 때 효과
+function myAttackEffect(){
+	if(flag1){
+		var op=1;
+	}else{
+		var op=0.5;
+	}
+	enemyPokemon.div.style.opacity=op;	
+	flag1=!flag1;
+	enemyEffectSt=setTimeout("myAttackEffect()",100);
+}
+//나의 포켓몬이 공격 받았을 때 효과
+function enemyAttackEffect(){
+	if(flag2){
+		var op=1;
+	}else{
+		var op=0.5;
+	}
+	myPokemon.div.style.opacity=op;	
+	flag2=!flag2;
+	myEffectSt=setTimeout("enemyAttackEffect()",100);
+}
+//스킬 사용 후 화면에서 제거
+function removeSkill(){
+	stage.removeChild(sk);
+	flag1=true;
+	clearTimeout(enemyEffectSt);
+}
+//내 포켓몬이 깜박거리는 효과 제거
+function stopEffect(){
+	flag2=true;
+	clearTimeout(myEffectSt);
+	myHpArray[number].myHpFunction(number);
+}
+//포켓볼 던지는 효과
+function pocketBallMove(){
+	enemyPokemon.targetX=690;
+	enemyPokemon.targetY=270;
+	st=setInterval("enemyPokemon.render()", 10);
+}
+//화면 중앙의 텍스트 div 생성 함수
+function createText(n){
+	switch(n){
+	case 1:  //야생 포켓몬과 충돌 시 
+		var text="야생 "+pokemonList[enemyNumber]+" 가(이) 튀어나왔다!!";
+		infoText=new InfoText(stage,60,200,900,250,250,text,50);
+		infoText.remove1();
+		break;
+	case 2:  //적 포켓몬이 포켓볼에서 빠져나왔을 때
+		if(flag){
+			enemyPokemon.img.src="./images/rocket/"+rocketList[rocketNum]+".png";
+			var text="로켓단의 포켓몬은 잡을 수 없다";
+		}else{
+			enemyPokemon.img.src="./images/pokemon/"+pokemonList[enemyNumber]+".png";
+			var text="아깝다! 조금만 더 하면 됐는데!";
+		}
+		enemyPokemon.div.style.width=300+"px";
+		enemyPokemon.img.style.width=300+"px";
+		enemyPokemon.img.style.height=300+"px";
+		enemyPokemon.div.style.left=600+"px";
+		enemyPokemon.div.style.top=120+"px";
+		infoText=new InfoText(stage,60,200,900,250,250,text,50);
+		clearInterval(st);
+		break;
+	case 3:  //로켓단과 충돌 시 
+		var text="로켓단 로사와 로이가 승부를 걸어왔다!!";
+		infoText=new InfoText(stage,30,200,950,250,250,text,50);
+		infoText.remove1();
+		break;
+	case 4:  //로켓단이 포켓몬을 내보냈을 때 
+		var text="로켓단은 "+rocketList[rocketNum]+" 를(을) 내보냈다!!";
+		infoText=new InfoText(stage,60,200,900,250,250,text,50);
+		infoText.remove1();
+		break;
+	}
+}
+//게임 내의 모든 배틀 오브젝트들을 제거
+function removeBattleAll(){
+	var l=objectManager.battleObjectArray.length;
+	for(var i=0;i<l;i++){
+		var obj=objectManager.battleObjectArray[0];
+		objectManager.removeBattleObject(obj);
+	}
+	myHpArray=[];
+	number=0;
+	setTimeout("main()", 3200);
+}
+
+//게임 클리어 화면 생성 함수
+function createClear(){
+	for(var i=0;i<3;i++){
+		myHpArray[i].div.style.opacity=0;
+	}
+
+	var text="Game Clear!!";
+	infoText=new InfoText(stage,0,0,1000,800,500,text,100);
+	infoText.div.style.borderRadius=0+"px";
+	infoText.div.style.opacity=1.0;
+
+	var txt="게임 계속하기";
+	btClear=new Bt(stage,300,400,400,110,"#fff",txt,50,0);
+	btClear.div.style.borderRadius=20+"px";
+	btClear.div.style.opacity=0.7;
+
+	btClear.div.addEventListener("click", function(){
+		gameClear=1;
+		flag=false;
+		rocketNum=0;
+		removeBattleAll();
+	});
+}
+
+function gameLoop(){
+	objectManager.tick();
+	objectManager.render();
+	setTimeout("gameLoop()", 100);
+}
+
+addEventListener("load", function(){
+	init();
+});
+</script>
+</head>
+<body onKeyDown="control()" onKeyUp="stop()">
+	<div id="stage"></div>
+</body>
+</html>

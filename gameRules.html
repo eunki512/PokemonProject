@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>gameRules</title>
+<style>
+*{margin:0px;}
+#stage{
+	width:1300px;
+	height:2100px;
+	background:#00cc33;
+	margin:auto;
+	font-size:30px;
+	font-weight:bold;
+	line-height:150px;
+	color:#ffff00;
+	text-align:center;
+}
+img:nth-child(1){
+	width:1200px;
+	height:500px;
+}
+img:nth-child(2){
+	width:1200px;
+	height:800px;
+}
+</style>
+<script src="./lib/Object.js"></script>
+<script src="./lib/Bt.js"></script>
+<script>
+var stage;
+var audio;
+
+function init(){
+	stage=document.getElementById("stage");
+	audio=document.createElement("audio");
+	audio.volume=0.25;
+	audio.loop=true;
+
+	createAudio("./music/mainBGM.mp3");
+	createBt();
+}
+function createAudio(src){
+	audio.src=src;
+	audio.play();
+}
+function createBt(){
+	for(var i=0;i<2;i++){
+		if(i==0){
+			var text="메인화면";
+		}else{
+			var text="게임시작";
+		}
+		var bt=new Bt(stage,350+(i*200),50,200,100,"#d8fdc1",text,35,i);
+		bt.div.style.position="relative";
+		bt.div.style.float="left";
+		bt.div.style.color="#000";
+
+		bt.div.addEventListener("click", function(){
+			if(this.id==0){
+				location.assign("./gameMain.html");
+			}else{
+				location.assign("./game.html");
+			}
+		});
+	}
+}
+
+addEventListener("load", function(){
+	init();
+});
+</script>
+</head>
+<body>
+	<div id="stage">
+		<h1>게임방법</h1>
+		<img src="./images/rule1.jpg"/>
+		<img src="./images/rule2.jpg"/>
+	</div>
+</body>
+</html>
